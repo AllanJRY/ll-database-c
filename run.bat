@@ -1,3 +1,3 @@
 call ./build.bat
 
-"./output/db.exe" ./employees.db
+"./output/db.exe" -n -f ./employees.db

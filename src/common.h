@@ -1,5 +1,7 @@
 #ifndef COMMON_H
 
+#include <stdbool.h>
+
 typedef signed   char      i8;
 typedef unsigned char      u8;
 typedef          short     i16;
