@@ -47,22 +47,46 @@ int main(int argc, char** argv) {
         }
     }
 
+
     if (file_path == NULL) {
         printf("A file path must be given\n");
         print_usage(argv[0]);
         return -1;
     }
 
-    FILE* db_file = NULL;
+    FILE* db_file         = NULL;
+    Db_File_Header header = {0};
+
     if (new_file) {
-        if (!file_create(file_path, db_file)) {
+        if (!file_create(file_path, &db_file)) {
+            // TODO: log ?
+            return -1;
+        }
+
+        if (!file_header_init(db_file, &header)) {
             // TODO: log ?
             return -1;
         }
     } else {
-        if (!file_open(file_path, db_file)) {
+        if (!file_open(file_path, &db_file)) {
             // TODO: log ?
+            return -1;
         }
+
+        if (!file_header_read_and_validate(db_file, &header)) {
+            // TODO: log ?
+            return -1;
+        }
+
+    }
+
+    printf(
+        "precessing file: %s (v=%d count=%d size=%d is_new=%s)",
+        file_path, header.version, header.count, header.file_size, new_file ? "true" : "false"
+    );
+
+    if (!file_write_header(db_file, &header)) {
+        return -1;
     }
 
     fclose(db_file);
