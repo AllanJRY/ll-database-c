@@ -1,7 +1,5 @@
 #ifndef COMMON_H
 
-#include <stdbool.h>
-
 typedef signed   char      i8;
 typedef unsigned char      u8;
 typedef          short     i16;
@@ -13,6 +11,12 @@ typedef unsigned long long u64;
 
 typedef float  f32;
 typedef double f64;
+
+typedef u8  bool;
+typedef u32 bool16;
+typedef u32 bool32;
+#define true  1;
+#define false 0;
 
 #define COMMON_H
 #endif

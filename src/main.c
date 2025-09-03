@@ -1,10 +1,16 @@
 #ifdef _WIN32
 #define _CRT_SECURE_NO_DEPRECATE
-#endif
+#endif // _WIN32
+
+#ifdef __unix__
+// empty for now.
+#endif // __unix__
 
 #include <stdio.h>
 
 #include "common.h"
+
+#include "file.c"
 
 void print_usage(char* bin_name) {
     printf("Usage: %s -f <database file>\n", bin_name);
@@ -47,11 +53,19 @@ int main(int argc, char** argv) {
         return -1;
     }
 
-    printf("Db File: %s", file_path);
-    if(new_file) {
-        printf(" (new)");
+    FILE* db_file = NULL;
+    if (new_file) {
+        if (!file_create(file_path, db_file)) {
+            // TODO: log ?
+            return -1;
+        }
+    } else {
+        if (!file_open(file_path, db_file)) {
+            // TODO: log ?
+        }
     }
-    printf("\n");
+
+    fclose(db_file);
 
     return 0;
 }
