@@ -31,7 +31,7 @@ typedef struct Db_File_Header {
 //       Also, should logs should be removed from here and return an int with a specific value for
 //       different kinf of error ? like (OK, KO, KO_ALREADY_EXISTS etc...)
 bool file_create(char* file_path, FILE** new_file) {
-    // This check can be better by using OS specific functions.
+    // This check can be better by using OS specific functions (GetFileAttributes on windows and stat like fn on unix).
     FILE* check = fopen(file_path, "rb");
     if (check != NULL) {
         printf("file_create: File already exists");
@@ -60,7 +60,7 @@ bool file_open(char* file_path, FILE** opened_file) {
     return true;
 }
 
-bool file_write_header(FILE* db_file, Db_File_Header* header) {
+bool file_write(FILE* db_file, Db_File_Header* header, void* data, size_t data_bloc_size) {
     if (db_file == NULL) {
         printf("file_write_header: Db file is null");
         return false;
@@ -70,6 +70,9 @@ bool file_write_header(FILE* db_file, Db_File_Header* header) {
         printf("file_write_header: Header is null");
         return false;
     }
+    
+    // keep the count before endianness conversion for later use.
+    u32 data_count = header->count;
 
     header->version   = htons(header->version);
     header->count     = htons(header->count);
@@ -79,9 +82,17 @@ bool file_write_header(FILE* db_file, Db_File_Header* header) {
     rewind(db_file);
 
     if (fwrite(header, sizeof(Db_File_Header), 1, db_file) != 1) {
-        printf("file_write_header: Error while writing file\n");
+        printf("file_write_header: Error while writing file header\n");
         perror("file_write_header");
         return false;
+    }
+
+    if(data_count > 0) {
+        if (fwrite(data, data_bloc_size, data_count, db_file) != data_count) {
+            printf("file_write_header: Error while writing file's data\n");
+            perror("file_write_header");
+            return false;
+        }
     }
 
     return true;
