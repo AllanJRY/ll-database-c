@@ -13,6 +13,10 @@
 #include "file.c"
 #include "employee.c"
 
+// TODO:
+// - delete/remove (-d/-r) an employee by name
+// - update an employee (only hours or completely)
+
 void print_usage(char* bin_name) {
     printf("Usage: %s -f <database file>\n", bin_name);
     printf("\t -f -- (required) path to database file\n");
@@ -21,6 +25,7 @@ void print_usage(char* bin_name) {
 
 int main(int argc, char** argv) {
     bool new_file   = false;
+    bool list       = false;
     char* file_path = NULL;
     char* add_str   = NULL;
 
@@ -43,6 +48,10 @@ int main(int argc, char** argv) {
                 file_path = argv[arg_idx];
                 break;
             }
+            case 'l': {
+                list = true;
+                break;
+            }
             case 'n': {
                 new_file = true;
                 break;
@@ -63,25 +72,11 @@ int main(int argc, char** argv) {
     Db_File_Header header = {0};
 
     if (new_file) {
-        if (!file_create(file_path, &db_file)) {
-            // TODO: log ?
-            return -1;
-        }
-
-        if (!file_header_init(db_file, &header)) {
-            // TODO: log ?
-            return -1;
-        }
+        if (!file_create(file_path, &db_file)) return -1;
+        if (!file_header_init(&header))        return -1;
     } else {
-        if (!file_open(file_path, &db_file)) {
-            // TODO: log ?
-            return -1;
-        }
-
-        if (!file_header_read_and_validate(db_file, &header)) {
-            // TODO: log ?
-            return -1;
-        }
+        if (!file_open(file_path, &db_file))                  return -1;
+        if (!file_header_read_and_validate(db_file, &header)) return -1;
     }
 
     printf(
@@ -120,11 +115,12 @@ int main(int argc, char** argv) {
         }
     }
 
-    for (int i = 0; i < header.count; i += 1) {
-        Employee* employee = &employees[i];
-        printf("[%d]: name=%s address=%s hours=%d\n", i, employee->name, employee->address, employee->hours);
+    if (list) {
+        for (int i = 0; i < header.count; i += 1) {
+            Employee* employee = &employees[i];
+            printf("#%d\t name=%s\n\t address=%s\n\t hours=%d\n\n", i, employee->name, employee->address, employee->hours);
+        }
     }
-
 
     // TODO: extract into a sanitizing function ? And use fn pointer in file_write to sanitize the data before writing on file ?
     for (u32 i = 0; i < header.count; i += 1) {

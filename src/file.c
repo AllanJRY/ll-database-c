@@ -98,7 +98,7 @@ bool file_write(FILE* db_file, Db_File_Header* header, void* data, size_t data_b
     return true;
 }
 
-bool file_header_init(FILE* db_file, Db_File_Header* header_to_init) {
+bool file_header_init(Db_File_Header* header_to_init) {
     if (header_to_init == NULL) {
         printf("file_header_init: Header is null");
         return false;
