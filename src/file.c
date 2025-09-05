@@ -60,6 +60,7 @@ bool file_open(char* file_path, FILE** opened_file) {
     return true;
 }
 
+// FIXME: file need to be truncated before writing the data again. or keep a deleted count in the header.
 bool file_write(FILE* db_file, Db_File_Header* header, void* data, size_t data_bloc_size) {
     if (db_file == NULL) {
         printf("file_write_header: Db file is null");
@@ -72,12 +73,12 @@ bool file_write(FILE* db_file, Db_File_Header* header, void* data, size_t data_b
     }
     
     // keep the count before endianness conversion for later use.
-    u32 data_count = header->count;
+    u16 data_count = header->count;
 
     header->version   = htons(header->version);
     header->count     = htons(header->count);
     header->magic     = htonl(header->magic);
-    header->file_size = htonl(header->file_size);
+    header->file_size = htonl(sizeof(Db_File_Header) + (data_count * data_bloc_size));
 
     rewind(db_file);
 

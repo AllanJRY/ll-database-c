@@ -28,6 +28,7 @@ int main(int argc, char** argv) {
     bool list       = false;
     char* file_path = NULL;
     char* add_str   = NULL;
+    char* del_str   = NULL;
 
     for (int arg_idx = 1; arg_idx < argc; arg_idx += 1) {
         char* flag = argv[arg_idx];
@@ -41,6 +42,11 @@ int main(int argc, char** argv) {
             case 'a': {
                 arg_idx += 1;
                 add_str = argv[arg_idx];
+                break;
+            }
+            case 'd': {
+                arg_idx += 1;
+                del_str = argv[arg_idx];
                 break;
             }
             case 'f': {
@@ -85,7 +91,8 @@ int main(int argc, char** argv) {
     );
 
     // NOTE: Because employees is not a growable list yet, we assume that add can only append 1 customer,
-    // so we pre-allocate a slot for him.
+    // so we pre-allocate a slot for him. If some deletes occure, this extra slot will not be used, this 
+    // is a bit of waste but this is ok for now, a growable list would waste even more space.
     u32 employees_capacity = header.count;
     if (add_str != NULL) {
         employees_capacity += 1; 
@@ -103,12 +110,14 @@ int main(int argc, char** argv) {
         return -1;
     }
 
+    if (del_str != NULL) {
+        u16 employee_deleted_count = employees_delete(&header.count, employees, del_str);
+        printf("%d employee(s) with name '%s' deleted", employee_deleted_count, del_str);
+    }
+
+
     if (add_str != NULL) {
-        // employees should grow
-        if (employees_create(&employees[header.count], add_str)) {
-            header.count     += 1;
-            header.file_size += sizeof(Employee);
-        } else {
+        if (!employees_create(&header.count, &employees[header.count], add_str)) {
             printf("unable to create employee");
             fclose(db_file);
             return -1;
@@ -129,6 +138,9 @@ int main(int argc, char** argv) {
         employees[i].hours = ntohl(employees[i].hours);
     }
 
+    // File is openend in `rb+` mode, but his content need to be truncated to cleanup deleted entries.
+    // so this line re-open it with `wb` mode to truncate his content and write the cleaned up datas.
+    db_file = freopen(file_path, "wb", db_file);
     if (!file_write(db_file, &header, employees, sizeof(Employee))) {
         return -1;
     }
