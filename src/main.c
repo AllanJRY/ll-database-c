@@ -18,7 +18,11 @@
 void print_usage(char* bin_name) {
     printf("Usage: %s -f <database file>\n", bin_name);
     printf("\t -f -- (required) path to database file\n");
+    printf("\t -a -- add an employee (str value format = 'NAME,ADDR,HOURS'\n");
+    printf("\t -d -- delete employees by name\n");
+    printf("\t -l -- list employees\n");
     printf("\t -n -- create new database file\n");
+    printf("\t -u -- update employees by name (str value format = 'NAME:ADDR,HOURS'\n");
 }
 
 int main(int argc, char** argv) {
