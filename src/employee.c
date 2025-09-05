@@ -65,7 +65,47 @@ bool employees_create(u16* employee_count, Employee* employee, char* add_str) {
     return true;
 }
 
+u16 employees_update(u16 employee_count, Employee* employees, char* upt_str) {
+    if (employees == NULL) {
+        printf("employees_update: Employees is null");
+        return false;
+    }
+
+    if (upt_str == NULL) {
+        printf("employees_update: Update string is null");
+        return false;
+    }
+
+    char* name  = strtok(upt_str, ":");
+    char* addr  = strtok(NULL, ",");
+    char* hours = strtok(NULL, ",");
+
+    u16 employee_updated_count = 0;
+
+    for (u16 i = 0; i < employee_count; i += 1) {
+        Employee* employee = &employees[i];
+
+        if (strcmp(employee->name, name) == 0) {
+            employee_updated_count += 1;
+            employee->hours         = atoi(hours);
+            strncpy(employee->address, addr, sizeof(employee->address));
+        }
+    }
+
+    return employee_updated_count;
+}
+
 u16 employees_delete(u16* employee_count, Employee* employees, char* name) {
+    if (employees == NULL) {
+        printf("employees_delete: Employees is null");
+        return false;
+    }
+
+    if (name == NULL) {
+        printf("employees_delete: Name string is null");
+        return false;
+    }
+
     u16 employee_deleted_count = 0;
 
     u16 i = 0;

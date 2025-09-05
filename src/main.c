@@ -14,7 +14,6 @@
 #include "employee.c"
 
 // TODO:
-// - delete/remove (-d/-r) an employee by name
 // - update an employee (only hours or completely)
 
 void print_usage(char* bin_name) {
@@ -28,6 +27,7 @@ int main(int argc, char** argv) {
     bool list       = false;
     char* file_path = NULL;
     char* add_str   = NULL;
+    char* upt_str   = NULL;
     char* del_str   = NULL;
 
     for (int arg_idx = 1; arg_idx < argc; arg_idx += 1) {
@@ -60,6 +60,11 @@ int main(int argc, char** argv) {
             }
             case 'n': {
                 new_file = true;
+                break;
+            }
+            case 'u': {
+                arg_idx += 1;
+                upt_str = argv[arg_idx];
                 break;
             }
             default: {
@@ -112,9 +117,13 @@ int main(int argc, char** argv) {
 
     if (del_str != NULL) {
         u16 employee_deleted_count = employees_delete(&header.count, employees, del_str);
-        printf("%d employee(s) with name '%s' deleted", employee_deleted_count, del_str);
+        printf("%d employee(s) deleted", employee_deleted_count);
     }
 
+    if (upt_str != NULL) {
+        u16 employee_updated_count = employees_update(header.count, employees, upt_str);
+        printf("%d employee(s) updated", employee_updated_count);
+    }
 
     if (add_str != NULL) {
         if (!employees_create(&header.count, &employees[header.count], add_str)) {

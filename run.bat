@@ -21,8 +21,14 @@ call ./build.bat
 "./output/db.exe" -f ./employees.db -l
 
 "./output/db.exe" -f ./employees.db -a "Megan,Rue en Normandie,2"
+
 "./output/db.exe" -f ./employees.db -a "Louis,Unknown,0"
-"./output/db.exe" -f ./employees.db -a "Louis,Unknown,0"
+
+"./output/db.exe" -f ./employees.db -l
+
+"./output/db.exe" -f ./employees.db -a "Louis,Unknown,0" -u "Megan:To Delete:0"
+
+"./output/db.exe" -f ./employees.db -u "Louis:Unknown Updated,0"
 
 "./output/db.exe" -f ./employees.db -l
 
@@ -30,7 +36,14 @@ call ./build.bat
 
 "./output/db.exe" -f ./employees.db -l
 
+"./output/db.exe" -f ./employees.db -u "Test:Quelque part,100"
+
+"./output/db.exe" -f ./employees.db -l
+
 "./output/db.exe" -f ./employees.db -a "Test,Rue de test,19" -d "Louis"
 
 "./output/db.exe" -f ./employees.db -l
 
+"./output/db.exe" -f ./employees.db -u "Klara:Cournon,200"
+
+"./output/db.exe" -f ./employees.db -l
