@@ -3,7 +3,7 @@
 #endif // _WIN32
 
 #ifdef __unix__
-// empty for now.
+#include <stdlib.h>
 #endif // __unix__
 
 #include <stdio.h>
@@ -13,8 +13,7 @@
 #include "file.c"
 #include "employee.c"
 
-// TODO:
-// - update an employee (only hours or completely)
+// TODO: - better error msg on invalid/malformated add, upt and del str.
 
 void print_usage(char* bin_name) {
     printf("Usage: %s -f <database file>\n", bin_name);
@@ -117,17 +116,17 @@ int main(int argc, char** argv) {
 
     if (del_str != NULL) {
         u16 employee_deleted_count = employees_delete(&header.count, employees, del_str);
-        printf("%d employee(s) deleted", employee_deleted_count);
+        printf("%d employee(s) deleted\n", employee_deleted_count);
     }
 
     if (upt_str != NULL) {
         u16 employee_updated_count = employees_update(header.count, employees, upt_str);
-        printf("%d employee(s) updated", employee_updated_count);
+        printf("%d employee(s) updated\n", employee_updated_count);
     }
 
     if (add_str != NULL) {
         if (!employees_create(&header.count, &employees[header.count], add_str)) {
-            printf("unable to create employee");
+            printf("unable to create employee\n");
             fclose(db_file);
             return -1;
         }
