@@ -8,13 +8,17 @@
 #include <stdio.h>
 #include <string.h>
 
-#define BUFF_SIZE   4096
-#define MAX_CLIENTS 256
+#include <socket.h>
+
+#define MAX_CLIENTS   256
 
 typedef enum State {
     STATE_NEW,
     STATE_CONNECTED,
     STATE_DISCONNECTED,
+    STATE_HELLO,
+    STATE_MSG,
+    STATE_GOODBYE,
 } State;
 
 typedef struct Client_State {
@@ -51,6 +55,35 @@ int clients_find_slot_by_fd(int fd) {
     }
 
     return -1; // not found
+}
+
+// handle client exchanges with a finite state machine
+void client_handle_fsm(Db_File_Header* db_file_header, Employee* employees, Client_State* client) {
+    Proto_Header* header = (Proto_Header*) client->buffer;
+
+    header->type = ntohl(header->type);
+    header->len  = ntohs(header->len);
+
+    if (client->state == STATE_HELLO) {
+        if (header->type != MSG_HELLO_REQ || header->len != 1) {
+            printf("didn't get MSG_HELLO in HELLO state\n");
+            // send error msg
+        }
+
+        Proto_Hello_Req* hello_req = (Proto_Hello_Req*) &header[1];
+        hello_req->proto_version = ntohs(hello_req->proto_version);
+        if (hello_req->proto_version != PROTO_VERSION) {
+            printf("protocol version mismatch\n");
+            // send error msg
+        }
+
+        // send hello resp
+        client->state = STATE_MSG;
+    }
+
+    if (client->state == STATE_MSG) {
+    }
+
 }
 
 bool socket_run(u16 socket_port, Db_File_Header* db_file_header, Employee* employees) {
@@ -164,7 +197,7 @@ bool socket_run(u16 socket_port, Db_File_Header* db_file_header, Employee* emplo
                         tracked_fd_count -= 1;
                     }
                 } else {
-                    printf("received data from client: %s\n", client_states[slot].buffer);
+                    client_handle_fsm(db_file_header, employees, &client_states[slot]);
                 }
             }
         }
