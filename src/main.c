@@ -12,12 +12,14 @@
 
 #include "file.c"
 #include "employee.c"
+#include "socket.c"
 
 // TODO: - better error msg on invalid/malformated add, upt and del str.
 
 void print_usage(char* bin_name) {
-    printf("Usage: %s -f <database file>\n", bin_name);
+    printf("Usage: %s -f <database file> -p <socket port>\n", bin_name);
     printf("\t -f -- (required) path to database file\n");
+    printf("\t -p -- (required) port on which to open a socket\n");
     printf("\t -a -- add an employee (str value format = 'NAME,ADDR,HOURS'\n");
     printf("\t -d -- delete employees by name\n");
     printf("\t -l -- list employees\n");
@@ -32,6 +34,7 @@ int main(int argc, char** argv) {
     char* add_str   = NULL;
     char* upt_str   = NULL;
     char* del_str   = NULL;
+    u16 socket_port = 0;
 
     for (int arg_idx = 1; arg_idx < argc; arg_idx += 1) {
         char* flag = argv[arg_idx];
@@ -65,6 +68,14 @@ int main(int argc, char** argv) {
                 new_file = true;
                 break;
             }
+            case 'p': {
+                arg_idx += 1;
+                socket_port = atoi(argv[arg_idx]);
+                if (socket_port == 0) {
+                    printf("invalid socket port: %s\n", argv[arg_idx]);
+                }
+                break;
+            }
             case 'u': {
                 arg_idx += 1;
                 upt_str = argv[arg_idx];
@@ -77,7 +88,13 @@ int main(int argc, char** argv) {
     }
 
     if (file_path == NULL) {
-        printf("A file path must be given\n");
+        printf("a file path must be given\n");
+        print_usage(argv[0]);
+        return -1;
+    }
+
+    if (socket_port == 0) {
+        printf("socket port not set\n");
         print_usage(argv[0]);
         return -1;
     }
@@ -98,7 +115,7 @@ int main(int argc, char** argv) {
         file_path, header.version, header.count, header.file_size, new_file ? "true" : "false"
     );
 
-    // NOTE: Because employees is not a growable list yet, we assume that add can only append 1 customer,
+    // Because employees is not a growable list yet, we assume that add can only append 1 customer,
     // so we pre-allocate a slot for him. If some deletes occure, this extra slot will not be used, this 
     // is a bit of waste but this is ok for now, a growable list would waste even more space.
     u32 employees_capacity = header.count;
@@ -142,6 +159,8 @@ int main(int argc, char** argv) {
             printf("#%d\t name=%s\n\t address=%s\n\t hours=%d\n\n", i, employee->name, employee->address, employee->hours);
         }
     }
+
+    socket_run(socket_port, &header, employees);
 
     // TODO: extract into a sanitizing function ? And use fn pointer in file_write to sanitize the data before writing on file ?
     for (u32 i = 0; i < header.count; i += 1) {
