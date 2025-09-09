@@ -65,7 +65,7 @@ void client_send_error(Client_State* client, Proto_Header* header) {
 }
 
 // handle client exchanges with a finite state machine
-void client_handle_fsm(Db_File_Header* db_file_header, Employee* employees, Client_State* client) {
+void client_handle_fsm(Db_File_Header* db_file_header, Employee* employees, Client_State* client) { // TODO: only employee count is used from the header ?
     Proto_Header* header = (Proto_Header*) client->buffer;
 
     header->type = ntohl(header->type);
@@ -94,9 +94,44 @@ void client_handle_fsm(Db_File_Header* db_file_header, Employee* employees, Clie
 
         client->state = STATE_MSG;
         printf("client upgraded to STATE_MSG\n");
+        return;
     }
 
     if (client->state == STATE_MSG) {
+        switch (header->type) {
+            case MSG_HELLO_RESP:
+            case MSG_HELLO_REQ: {
+                // do nothing
+                break;
+            }
+            case MSG_EMPLOYEE_ADD_REQ: {
+                if (header->len != 1) {
+                    printf("invalid employee add header\n");
+                    client_send_error(client, header);
+                    return;
+                }
+
+                Proto_Employee_Add_Req* employee_add_req = (Proto_Employee_Add_Req*) &header[1];
+
+                if(!employees_create(&db_file_header->count, employees, employee_add_req->add_str)) {
+                    client_send_error(client, header);
+                    return;
+                }
+
+                header->type                               = htonl(MSG_EMPLOYEE_ADD_RESP);
+                header->len                                = htons(1);
+                Proto_Employee_Add_Resp* employee_add_resp = (Proto_Employee_Add_Resp*) &header[1];
+                employee_add_resp->new_employee_idx        = htonl(db_file_header->count - 1);
+
+                write(client->fd, client->buffer, sizeof(Proto_Header) + sizeof(Proto_Employee_Add_Resp));
+                break;
+            }
+            default: {
+                printf("unknown message type: %d\n", header->type);
+                client_send_error(client, header);
+                return;
+            }
+        }
     }
 
 }

@@ -115,12 +115,9 @@ int main(int argc, char** argv) {
         file_path, header.version, header.count, header.file_size, new_file ? "true" : "false"
     );
 
-    // Because employees is not a growable list yet, we assume that add can only append 1 customer,
-    // so we pre-allocate a slot for him. If some deletes occure, this extra slot will not be used, this 
-    // is a bit of waste but this is ok for now, a growable list would waste even more space.
     u32 employees_capacity = header.count;
     if (add_str != NULL) {
-        employees_capacity += 1; 
+        employees_capacity += 10;  // TODO: arbitrary for now, but the list should grow automaticaly
     }
     Employee* employees = calloc(employees_capacity, sizeof(Employee));
 

@@ -60,6 +60,7 @@ bool employees_create(u16* employee_count, Employee* employee, char* add_str) {
     strncpy(employee->address, addr, sizeof(employee->address));
     employee->hours = atoi(hours);
 
+    printf("new employee created (name=%s idx=%d)\n", name, *employee_count);
     *employee_count += 1;
 
     return true;

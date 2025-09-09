@@ -32,5 +32,13 @@ typedef struct Proto_Hello_Resp {
     u16 proto_version;
 } Proto_Hello_Resp;
 
+typedef struct Proto_Employee_Add_Req {
+    char add_str[1024];
+} Proto_Employee_Add_Req;
+
+typedef struct Proto_Employee_Add_Resp {
+    u32 new_employee_idx;
+} Proto_Employee_Add_Resp;
+
 #define SOCKET_H
 #endif

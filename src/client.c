@@ -8,6 +8,7 @@
 #endif // __unix__
 
 #include <stdio.h>
+#include <string.h>
 
 #include "common.h"
 #include "socket.h"
@@ -46,10 +47,45 @@ bool send_hello(int fd) {
     return true;
 }
 
+bool send_employee_creation(int fd, char* add_str) {
+    if (add_str == NULL) {
+        printf("send_employee_creation: add string is null\n");
+        return false;
+    }
+
+    char buf[BUFF_SIZE] = {0};
+
+    Proto_Header* header = (Proto_Header*) buf;
+    header->type         = htonl(MSG_EMPLOYEE_ADD_REQ);
+    header->len          = htons(1);
+
+    Proto_Employee_Add_Req* employee_add_req = (Proto_Employee_Add_Req*) &header[1];
+    memcpy(employee_add_req->add_str, add_str, sizeof(employee_add_req->add_str));
+
+    write(fd, buf, sizeof(Proto_Header) + sizeof(employee_add_req->add_str));
+
+    read(fd, buf, sizeof(buf));
+
+    header->type = ntohl(header->type);
+    header->len  = ntohs(header->len);
+
+    if (header->type == MSG_ERROR) {
+        printf("send_employee_creation: server error while trying to add employee\n");
+        return false;
+    }
+
+    Proto_Employee_Add_Resp* employee_add_resp = (Proto_Employee_Add_Resp*) &header[1];
+    employee_add_resp->new_employee_idx        = ntohl(employee_add_resp->new_employee_idx);
+
+    printf("employee added (idx=%d)\n", employee_add_resp->new_employee_idx);
+    return true;
+}
+
 int main(int argc, char* argv[]) {
     char* server_ip = NULL;
     u16 server_port = 0;
 
+    char* add_str = NULL;
 
     for (int arg_idx = 1; arg_idx < argc; arg_idx += 1) {
         char* flag = argv[arg_idx];
@@ -60,6 +96,11 @@ int main(int argc, char* argv[]) {
         }
 
         switch(flag[1]) {
+            case 'a': {
+                arg_idx += 1;
+                add_str  = argv[arg_idx];
+                break;
+            }
             case 'h': {
                 arg_idx += 1;
                 server_ip = argv[arg_idx];
@@ -108,6 +149,12 @@ int main(int argc, char* argv[]) {
     if(!send_hello(sock_fd)) {
         close(sock_fd);
         return -1;
+    }
+
+    if (add_str != NULL) {
+        if (!send_employee_creation(sock_fd, add_str)) {
+            printf("error occured while trying to create employee\n");
+        }
     }
 
     close(sock_fd);
