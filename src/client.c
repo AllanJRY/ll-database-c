@@ -11,7 +11,10 @@
 #include <string.h>
 
 #include "common.h"
+
+#include "employee.c" // TODO: make a header for employee.c
 #include "socket.h"
+
 
 void print_usage(char* bin_name) {
     printf("Usage: %s -h <server ip> -p <server port>\n", bin_name);
@@ -43,7 +46,7 @@ bool send_hello(int fd) {
         return false;
     }
 
-    printf("connected to database (proto_version=%d)\n", PROTO_VERSION);
+    printf("connected to database (proto_version=%d)\n\n", PROTO_VERSION);
     return true;
 }
 
@@ -81,11 +84,46 @@ bool send_employee_creation(int fd, char* add_str) {
     return true;
 }
 
+bool send_employee_list(int fd) {
+    char buf[BUFF_SIZE] = {0};
+
+    Proto_Header* header = (Proto_Header*) buf;
+    header->type         = htonl(MSG_EMPLOYEE_LIST_REQ);
+    header->len          = htons(0);
+
+    write(fd, buf, sizeof(Proto_Header));
+
+    // read the header, to get the number of employees that has to be handled
+    read(fd, buf, sizeof(buf));
+
+    header->type = ntohl(header->type);
+    header->len  = ntohs(header->len);
+
+    if (header->type == MSG_ERROR) {
+        printf("send_employee_list: server error while trying to list employees\n");
+        return false;
+    }
+
+    // TODO: check if header->type == MSG_EMPLOYEE_LIST
+    
+    Employee* employee = (Employee*) &header[1];
+
+    // read the employees, they are received one at a time in the socket buffer
+    for (int i = 0; i < header->len; i += 1) {
+        read(fd, employee, sizeof(Employee));
+        employee->hours = ntohl(employee->hours);
+        printf("#%d\t name=%s\n\t address=%s\n\t hours=%d\n\n", i, employee->name, employee->address, employee->hours);
+    }
+
+    return true;
+}
+
 int main(int argc, char* argv[]) {
     char* server_ip = NULL;
     u16 server_port = 0;
 
     char* add_str = NULL;
+    bool list     = false;
 
     for (int arg_idx = 1; arg_idx < argc; arg_idx += 1) {
         char* flag = argv[arg_idx];
@@ -104,6 +142,10 @@ int main(int argc, char* argv[]) {
             case 'h': {
                 arg_idx += 1;
                 server_ip = argv[arg_idx];
+                break;
+            }
+            case 'l': {
+                list = true;
                 break;
             }
             case 'p': {
@@ -154,6 +196,12 @@ int main(int argc, char* argv[]) {
     if (add_str != NULL) {
         if (!send_employee_creation(sock_fd, add_str)) {
             printf("error occured while trying to create employee\n");
+        }
+    }
+
+    if (list) {
+        if (!send_employee_list(sock_fd)) {
+            printf("error occured while trying to list employees\n");
         }
     }
 

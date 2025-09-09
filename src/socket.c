@@ -123,13 +123,30 @@ void client_handle_fsm(Db_File_Header* db_file_header, Employee* employees, Clie
                 Proto_Employee_Add_Resp* employee_add_resp = (Proto_Employee_Add_Resp*) &header[1];
                 employee_add_resp->new_employee_idx        = htonl(db_file_header->count - 1);
 
+                // TODO: write to file
+
                 write(client->fd, client->buffer, sizeof(Proto_Header) + sizeof(Proto_Employee_Add_Resp));
+                break;
+            }
+            case MSG_EMPLOYEE_LIST_REQ: {
+                header->type = htonl(MSG_EMPLOYEE_LIST_RESP);
+                header->len  = htons(db_file_header->count);
+
+                write(client->fd, client->buffer, sizeof(Proto_Header));
+
+                Proto_Employee_List_Resp* employee_list_resp = (Proto_Employee_List_Resp*) &header[1];
+                for (int i = 0; i < db_file_header->count; i += 1) {
+                    memcpy(&employee_list_resp->employee, &employees[i], sizeof(Employee));
+                    employee_list_resp->employee.hours = htonl(employee_list_resp->employee.hours);
+                    write(client->fd, employee_list_resp, sizeof(Proto_Employee_List_Resp));
+                }
+
                 break;
             }
             default: {
                 printf("unknown message type: %d\n", header->type);
-                client_send_error(client, header);
-                return;
+                // client_send_error(client, header);
+                // return;
             }
         }
     }

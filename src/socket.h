@@ -40,5 +40,9 @@ typedef struct Proto_Employee_Add_Resp {
     u32 new_employee_idx;
 } Proto_Employee_Add_Resp;
 
+typedef struct Proto_Employee_List_Resp {
+    Employee employee;
+} Proto_Employee_List_Resp;
+
 #define SOCKET_H
 #endif
