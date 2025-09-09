@@ -6,6 +6,7 @@
 #define PROTO_VERSION 1
 
 typedef enum Proto_Msg_Type {
+    MSG_ERROR,
     MSG_HELLO_REQ,
     MSG_HELLO_RESP,
     MSG_EMPLOYEE_LIST_REQ,

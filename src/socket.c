@@ -57,6 +57,13 @@ int clients_find_slot_by_fd(int fd) {
     return -1; // not found
 }
 
+void client_send_error(Client_State* client, Proto_Header* header) {
+    header->type = htonl(MSG_ERROR);
+    header->len  = htons(0);
+
+    write(client->fd, client->buffer, sizeof(Proto_Header));
+}
+
 // handle client exchanges with a finite state machine
 void client_handle_fsm(Db_File_Header* db_file_header, Employee* employees, Client_State* client) {
     Proto_Header* header = (Proto_Header*) client->buffer;
@@ -74,11 +81,19 @@ void client_handle_fsm(Db_File_Header* db_file_header, Employee* employees, Clie
         hello_req->proto_version = ntohs(hello_req->proto_version);
         if (hello_req->proto_version != PROTO_VERSION) {
             printf("protocol version mismatch\n");
-            // send error msg
+            client_send_error(client, header);
+            return;
         }
 
-        // send hello resp
+
+        header->type                 = htonl(MSG_HELLO_RESP);
+        header->len                  = htons(1);
+        Proto_Hello_Resp* hello_resp = (Proto_Hello_Resp*) hello_req;
+        hello_resp->proto_version    = htons(hello_resp->proto_version);
+        write(client->fd, client->buffer, sizeof(Proto_Header) + sizeof(Proto_Hello_Resp));
+
         client->state = STATE_MSG;
+        printf("client upgraded to STATE_MSG\n");
     }
 
     if (client->state == STATE_MSG) {
@@ -169,7 +184,7 @@ bool socket_run(u16 socket_port, Db_File_Header* db_file_header, Employee* emplo
                 close(client_fd);
             } else {
                 client_states[next_free_slot].fd     = client_fd;
-                client_states[next_free_slot].state  = STATE_CONNECTED;
+                client_states[next_free_slot].state  = STATE_HELLO;
                 tracked_fd_count                    += 1;
                 printf("slot %d has fd %d\n", next_free_slot, client_states[next_free_slot].fd);
             }
