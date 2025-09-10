@@ -103,8 +103,9 @@ int main(int argc, char** argv) {
     Db_File_Header header = {0};
 
     if (new_file) {
-        if (!file_create(file_path, &db_file)) return -1;
-        if (!file_header_init(&header))        return -1;
+        if (!file_create(file_path, &db_file))      return -1;
+        if (!file_header_init(&header))             return -1;
+        if (!file_write(db_file, &header, NULL, 0)) return -1;
     } else {
         if (!file_open(file_path, &db_file))                  return -1;
         if (!file_header_read_and_validate(db_file, &header)) return -1;
@@ -115,10 +116,8 @@ int main(int argc, char** argv) {
         file_path, header.version, header.count, header.file_size, new_file ? "true" : "false"
     );
 
-    u32 employees_capacity = header.count;
-    if (add_str != NULL) {
-        employees_capacity += 10;  // TODO: arbitrary for now, but the list should grow automaticaly
-    }
+    // TODO: we add 10 to give the hability to create up to 10 users, it is temporary, the list should grow automaticaly.
+    u32 employees_capacity = header.count + 10;
     Employee* employees = calloc(employees_capacity, sizeof(Employee));
 
     if(employees == NULL) {
@@ -157,21 +156,23 @@ int main(int argc, char** argv) {
         }
     }
 
-    socket_run(socket_port, &header, employees);
+    socket_run(socket_port, file_path, &db_file, &header, employees);
 
+    // The write is triggered by in the sockets actions.
+    
     // TODO: extract into a sanitizing function ? And use fn pointer in file_write to sanitize the data before writing on file ?
-    for (u32 i = 0; i < header.count; i += 1) {
-        // Only for multi bytes type. char is 1 byte si name, and address not be changed, 
-        // but hours is 4 bytes so the endianness impact this value.
-        employees[i].hours = ntohl(employees[i].hours);
-    }
+    // for (u32 i = 0; i < header.count; i += 1) {
+    //     // Only for multi bytes type. char is 1 byte si name, and address not be changed, 
+    //     // but hours is 4 bytes so the endianness impact this value.
+    //     employees[i].hours = htonl(employees[i].hours);
+    // }
 
     // File is openend in `rb+` mode, but his content need to be truncated to cleanup deleted entries.
     // so this line re-open it with `wb` mode to truncate his content and write the cleaned up datas.
-    db_file = freopen(file_path, "wb", db_file);
-    if (!file_write(db_file, &header, employees, sizeof(Employee))) {
-        return -1;
-    }
+    // db_file = freopen(file_path, "wb", db_file);
+    // if (!file_write(db_file, &header, employees, sizeof(Employee))) {
+    //     return -1;
+    // }
 
     fclose(db_file);
 

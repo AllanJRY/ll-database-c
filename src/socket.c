@@ -65,7 +65,7 @@ void client_send_error(Client_State* client, Proto_Header* header) {
 }
 
 // handle client exchanges with a finite state machine
-void client_handle_fsm(Db_File_Header* db_file_header, Employee* employees, Client_State* client) { // TODO: only employee count is used from the header ?
+void client_handle_fsm(char* db_file_path, FILE** db_file, Db_File_Header* db_file_header, Employee* employees, Client_State* client) {
     Proto_Header* header = (Proto_Header*) client->buffer;
 
     header->type = ntohl(header->type);
@@ -113,7 +113,7 @@ void client_handle_fsm(Db_File_Header* db_file_header, Employee* employees, Clie
 
                 Proto_Employee_Add_Req* employee_add_req = (Proto_Employee_Add_Req*) &header[1];
 
-                if(!employees_create(&db_file_header->count, employees, employee_add_req->add_str)) {
+                if(!employees_create(&db_file_header->count, &employees[db_file_header->count], employee_add_req->add_str)) {
                     client_send_error(client, header);
                     return;
                 }
@@ -123,7 +123,28 @@ void client_handle_fsm(Db_File_Header* db_file_header, Employee* employees, Clie
                 Proto_Employee_Add_Resp* employee_add_resp = (Proto_Employee_Add_Resp*) &header[1];
                 employee_add_resp->new_employee_idx        = htonl(db_file_header->count - 1);
 
-                // TODO: write to file
+                // TODO: extract into a sanitizing function ? And use fn pointer in file_write to sanitize the data before writing on file ?
+                // also used in main.c
+                for (u32 i = 0; i < db_file_header->count; i += 1) {
+                    // Only for multi bytes type. char is 1 byte if name, and address not be changed, 
+                    // but hours is 4 bytes so the endianness impact this value.
+                    employees[i].hours = htonl(employees[i].hours);
+                }
+
+                // File is openend in `rb+` mode, but his content need to be truncated to cleanup deleted entries.
+                // so this line re-open it with `wb` mode to truncate his content and write the cleaned up datas.
+                *db_file = freopen(db_file_path, "wb", *db_file);
+                if (!file_write(*db_file, db_file_header, employees, sizeof(Employee))) {
+                    client_send_error(client, header);
+                    return;
+                }
+
+                // TODO: extract into a sanitizing (but with unsanitazing mode) function ? And use fn pointer in file_write to sanitize the data before writing on file ?
+                for (u32 i = 0; i < db_file_header->count; i += 1) {
+                    // Only for multi bytes type. char is 1 byte if name, and address not be changed, 
+                    // but hours is 4 bytes so the endianness impact this value.
+                    employees[i].hours = ntohl(employees[i].hours);
+                }
 
                 write(client->fd, client->buffer, sizeof(Proto_Header) + sizeof(Proto_Employee_Add_Resp));
                 break;
@@ -153,7 +174,7 @@ void client_handle_fsm(Db_File_Header* db_file_header, Employee* employees, Clie
 
 }
 
-bool socket_run(u16 socket_port, Db_File_Header* db_file_header, Employee* employees) {
+bool socket_run(u16 socket_port, char* db_file_path, FILE** db_file, Db_File_Header* db_file_header, Employee* employees) {
     struct sockaddr_in server_info = {0};
     server_info.sin_family         = AF_INET;
     server_info.sin_addr.s_addr    = INADDR_ANY;
@@ -264,7 +285,7 @@ bool socket_run(u16 socket_port, Db_File_Header* db_file_header, Employee* emplo
                         tracked_fd_count -= 1;
                     }
                 } else {
-                    client_handle_fsm(db_file_header, employees, &client_states[slot]);
+                    client_handle_fsm(db_file_path, db_file, db_file_header, employees, &client_states[slot]);
                 }
             }
         }

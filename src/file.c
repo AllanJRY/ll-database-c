@@ -96,6 +96,13 @@ bool file_write(FILE* db_file, Db_File_Header* header, void* data, size_t data_b
         }
     }
 
+    header->version   = ntohs(header->version);
+    header->count     = ntohs(header->count);
+    header->magic     = ntohl(header->magic);
+    header->file_size = ntohl(header->file_size);
+
+    fflush(db_file);
+
     return true;
 }
 
